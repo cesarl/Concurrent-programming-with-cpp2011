@@ -7,6 +7,8 @@
 #include <cstdlib>
 #include <cmath>
 #include <string>
+#include <mutex>
+#include <fstream>
 
 
 class Fctor
@@ -101,6 +103,100 @@ void avoidingOversubscription()
 	std::cout << std::thread::hardware_concurrency() << std::endl;
 }
 
+static std::mutex mu;
+
+void sharedPrint(const std::string &msg, unsigned int id)
+{
+	mu.lock();
+
+	/* if that line of code throw exeption,
+	std::mutex mu will be locked forever
+	that's why it's better to use solution you can find in
+	sharedPrint2
+	*/
+	std::cout << msg << id << std::endl;
+	mu.unlock();
+}
+
+void sharedPrint2(const std::string &msg, unsigned int id)
+{
+	std::lock_guard<std::mutex> guard(mu);
+	std::cout << msg << id << std::endl;
+
+/*
+We still have a problem here,
+std::cout is not entirely under protection of mutex mu
+if face it can be used without locking mu
+a better solution would be to do like downthere
+mutex has to be bounded with ressource that he's protecting
+*/
+}
+
+class LogFile
+{
+private:
+	std::mutex mutex_;
+	std::ofstream f_;
+public:
+	LogFile()
+	{
+		f_.open("LogFile.txt");
+	}
+	~LogFile()
+	{
+		f_.close();
+	}
+	void sharedPrint(const std::string & msg, unsigned int id)
+	{
+		std::lock_guard<std::mutex>	guard(mutex_);
+		f_ << msg << id << std::endl;
+	}
+	// be careful to never return avalue of a class of this type, like :
+	std::ofstream & getFile()
+	{
+		return f_;
+	} // it'll be accessible without usage of the mutex !!!
+
+	//also never pass f_ as argument to user provided function
+	// ex :
+	void process(void fun(std::ofstream& s))
+	{
+		fun(f_);
+	} // because function fun can ba whatever to f_ without using mutex
+};
+
+void threadLogToFile(LogFile &log)
+{
+	for (unsigned int i = 100; i > 0; --i)
+		log.sharedPrint("I'm a thread and I print ", i);
+}
+
+void logToFile()
+{
+	LogFile log;
+	std::thread t(threadLogToFile, std::ref(log));
+	for (unsigned int i = 0; i < 100; ++i)
+		log.sharedPrint("I'm a main and I print ", i);
+	t.join();
+}
+
+void threadDec()
+{
+	for (unsigned int i = 100; i > 0; --i)
+		sharedPrint("I'm a thread and I print ", i);
+}
+
+void mutexUsage()
+{
+	std::thread t(threadDec);
+
+	t.detach();
+	for (int i = 0; i < 100; i++)
+	{
+		sharedPrint("I'm main and I print ", i);
+	}	
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	//simpleThreadAndWait();
@@ -119,6 +215,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	//avoidingOversubscription();
 
+	//mutexUsage();
+
+logToFile();	
 	return EXIT_SUCCESS;
 }
 
