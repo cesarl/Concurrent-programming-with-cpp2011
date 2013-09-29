@@ -255,8 +255,32 @@ std::unique_lock<std::mutex> lock2 = std::move(lock1);
 But why using lock_guard if unique_lock is so cool and flexble ?!
 Because unique_lock are heavier ! So use unique_lock only if you need it !
 
-
 */
+
+
+class OpenFile
+{
+private:
+	std::mutex mu_;
+	std::ofstream file_;
+	std::once_flag flag_;
+public:
+	void writeSomething()
+	{
+		// if we do that we will lock mutex at each call in each thread,
+		// what's not optimized at all because we need to check just on time if
+		// file is open
+		std::unique_lock<std::mutex> locker(mu_);
+		if (!file_.is_open())
+			file_.open("myFile.log");
+
+		//best solution is to do that :
+		std::call_once(flag_, [&](){file_.open("myFile.log");});
+
+	}
+};
+
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	//simpleThreadAndWait();
