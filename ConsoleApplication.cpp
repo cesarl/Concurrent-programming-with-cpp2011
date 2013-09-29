@@ -140,7 +140,7 @@ private:
 public:
 	LogFile()
 	{
-		f_.open("LogFile.txt");
+		f_.open("LogFile.log");
 	}
 	~LogFile()
 	{
