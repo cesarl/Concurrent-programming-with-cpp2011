@@ -223,7 +223,40 @@ TIPS for avoiding dead lock :
 - If you cannot use std::lock() for multiple mutex, so lock your mutex in the same order for all threads
 */
 
+/*
+About unique locks
 
+An other way to lock mutex than std::lock_guard is std::unique_lock
+
+Unique lock have more flexibility than lock guard. For example, a unique lock can be unlocked :
+
+std::unique_lock<std::mutex> lock1(myMutex);
+std::cout << "work here" << std::endl;
+lock1.unlock();
+std::cout << "other work here that don't need a locked mutex" << std::endl;
+
+With unique lock you can use the constructor without locking the mutex
+and it's possible to lock and unlock how much time you want the same unique lock :
+
+std::unique_lock<std::mutex> lock1(myMutex, std::defer_lock);
+// mutex is not lock yet
+lock1.lock();
+// do something
+lock1.unlock();
+lock1.lock();
+lock1.unlock();
+...
+
+A unique lock can also be moved :
+
+std::unique_lock<std::mutex> lock1(myMutex);
+std::unique_lock<std::mutex> lock2 = std::move(lock1);
+
+But why using lock_guard if unique_lock is so cool and flexble ?!
+Because unique_lock are heavier ! So use unique_lock only if you need it !
+
+
+*/
 int _tmain(int argc, _TCHAR* argv[])
 {
 	//simpleThreadAndWait();
