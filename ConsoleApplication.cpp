@@ -197,6 +197,33 @@ void mutexUsage()
 	}	
 }
 
+
+/*
+Dead lock problems
+
+A dead lock appears when a thread is wating for a mutex locked by another thread
+and the other thread, a mutex locked by the first one.
+
+To avoid that we need to call lock() in the same order in all the thread.
+
+An other method is to use std::lock()
+
+Example for std::mutex mu1, mu2
+
+std::lock(mu1, mu2);
+std::lock_guard<std::mutex> lock1(mu1, std::adopt_lock);
+std::lock_guard<std::mutex> lock2(mu2, std::adopt_lock);
+
+TIPS for avoiding dead lock :
+
+- Be sure you cannot do the same thing without locking 2 mutex at the same time. Prefere locking single mutex at a time.
+- Avoid locking a mutex and then calling a user provided function :
+    you are not sure of what user function will do, maybe it'll try to lock again the same mutex
+- If you realy want to lock multiple mutex at a time so use std::lock()
+- If you cannot use std::lock() for multiple mutex, so lock your mutex in the same order for all threads
+*/
+
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	//simpleThreadAndWait();
