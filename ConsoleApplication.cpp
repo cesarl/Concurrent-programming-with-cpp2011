@@ -12,6 +12,7 @@
 #include <queue>
 #include <chrono>
 #include <condition_variable>
+#include <future>
 
 
 class Fctor
@@ -315,6 +316,99 @@ void fun2()
 		lock.unlock();
 		std::cout << "t2 got a value from t1 : " << data << std::endl;
 	}
+}
+
+//
+// Futur
+//
+
+int factorial(int n)
+{
+	int res = 1;
+	for (int i = n; i > 1; --i)
+	{
+		res *= i;
+	}
+	return res;
+}
+
+void threadWithFuture()
+{
+	int x;
+
+	// that'll launch a thread for execute factorial or not
+	// std::future<int> fu = std::async(factorial, 4);
+
+	// that'll execute factorial in the current thread	when
+	// fu.get() will be called
+	//std::future<int> fu = std::async(std::launch::deferred, factorial, 4);
+
+	// that'll execute factorial in a new created thread
+	// std::future<int> fu = std::async(std::launch::async, factorial, 4);
+
+	// that'll have the same behavior than the first solution :
+	//create or not an new thread
+	std::future<int> fu = std::async(std::launch::async | std::launch::deferred, factorial, 4);
+
+	x = fu.get();
+}
+
+
+//
+// Futur
+//
+
+int factorial2(std::future<int> f)
+{
+	int res = 1;
+	// thread wait for promise to set value
+	int n = f.get();
+	for (int i = n; i > 1; --i)
+	{
+		res *= i;
+	}
+	return res;
+}
+
+void threadWithPromise()
+{
+	int x;
+	std::promise<int> p;
+	std::future<int> f = p.get_future();
+
+	std::future<int> fu = std::async(std::launch::async, factorial2, std::ref(f));
+	// some code
+	// then I keep my promise
+	p.set_value(4);
+	x = fu.get();
+}
+
+int factorial2(std::shared_future<int> f)
+{
+	int res = 1;
+	// thread wait for promise to set value
+	int n = f.get();
+	for (int i = n; i > 1; --i)
+	{
+		res *= i;
+	}
+	return res;
+}
+
+void threadWithSharedFuture()
+{
+	int x;
+	std::promise<int> p;
+	std::future<int> f = p.get_future(); // cannot be copied
+	std::shared_future<int> sf = f.share(); // can be copied
+
+	std::future<int> fu = std::async(std::launch::async, factorial, sf);
+	std::future<int> fu1 = std::async(std::launch::async, factorial, sf);
+	std::future<int> fu2 = std::async(std::launch::async, factorial, sf);
+	// some code
+	// then I keep my promise
+	p.set_value(4);
+	x = fu.get();
 }
 
 
