@@ -9,6 +9,9 @@
 #include <string>
 #include <mutex>
 #include <fstream>
+#include <queue>
+#include <chrono>
+#include <condition_variable>
 
 
 class Fctor
@@ -276,9 +279,43 @@ public:
 
 		//best solution is to do that :
 		std::call_once(flag_, [&](){file_.open("myFile.log");});
-
 	}
 };
+
+
+//////////
+// Condition Variable
+//////////
+
+std::deque<unsigned int> q;
+std::mutex mu;
+std::condition_variable cond;
+
+void fun1()
+{
+	for (unsigned int i = 10; i > 0; --i)
+	{
+		std::unique_lock<std::mutex> lock(mu);
+		q.push_front(i);
+		lock.unlock();
+		cond.notify_one();
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
+}
+
+void fun2()
+{
+	int data = 0;
+	while (data != 1)
+	{
+		std::unique_lock<std::mutex> lock(mu);
+		cond.wait(lock, [](){ return !q.empty(); });
+		data = q.back();
+		q.pop_back();
+		lock.unlock();
+		std::cout << "t2 got a value from t1 : " << data << std::endl;
+	}
+}
 
 
 int _tmain(int argc, _TCHAR* argv[])
