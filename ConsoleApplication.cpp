@@ -383,7 +383,7 @@ void threadWithPromise()
 	x = fu.get();
 }
 
-int factorial2(std::shared_future<int> f)
+int factorial3(std::shared_future<int> f)
 {
 	int res = 1;
 	// thread wait for promise to set value
@@ -402,14 +402,54 @@ void threadWithSharedFuture()
 	std::future<int> f = p.get_future(); // cannot be copied
 	std::shared_future<int> sf = f.share(); // can be copied
 
-	std::future<int> fu = std::async(std::launch::async, factorial, sf);
-	std::future<int> fu1 = std::async(std::launch::async, factorial, sf);
-	std::future<int> fu2 = std::async(std::launch::async, factorial, sf);
+	std::future<int> fu = std::async(std::launch::async, factorial3, sf);
+	std::future<int> fu1 = std::async(std::launch::async, factorial3, sf);
+	std::future<int> fu2 = std::async(std::launch::async, factorial3, sf);
 	// some code
 	// then I keep my promise
 	p.set_value(4);
 	x = fu.get();
 }
+
+//
+// Callable object
+//
+
+class A
+{
+public:
+	void f (int x, char c)	{}
+	long g (double x) {return 0;}
+	int operator()(int n) {return 0;}
+	A(){}
+	~A(){}
+};
+
+void foo(int x) {}
+
+void CallableObjects()
+{
+	A a;
+	std::thread t1(a, 6); // copy of a() in new thread
+	std::thread t2(std::ref(a), 6); // reference of a()
+	std::thread t3(A(), 6); // temp A
+	std::thread t4([](int x){return x * x; }); // lambda
+	std::thread t5(foo, 6); // function
+	std::thread t6(&A::f, a, 6, 'w'); // copy of 'a' and invoque member function f() in new thread
+	std::thread t7(&A::f, &a, 6, 'w'); // ref of 'a' and invoque member function f() in new thread
+	std::thread t7(&A::f, std::move(a), 6, 'w'); // move of 'a' and invoque member function f() in new thread -> 'a' is not usable in currente thread
+
+	//the same rules cam be applied for bind(), async(), call_once(), ...
+}
+
+A::A()
+{
+}
+
+A::~A()
+{
+}
+
 
 
 int _tmain(int argc, _TCHAR* argv[])
